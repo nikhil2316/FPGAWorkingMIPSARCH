@@ -1,0 +1,24 @@
+#For CoreMipsTop.v
+
+NET "Master_clk" LOC = "AH15";		//100MHz Single Ended CLk, High Freq Clk
+NET "clk_PB" CLOCK_DEDICATED_ROUTE = FALSE; 
+NET "clk_PB" LOC = "U8";				//Slow clock, North SW
+NET "reset" LOC = "V8";					//reset, South SW
+
+NET "e" LOC = "AC9" | IOSTANDARD = LVCMOS33 | DRIVE = 4 | SLEW = SLOW ;
+NET "rs" LOC = "J17" | IOSTANDARD = LVCMOS33 | DRIVE = 4 | SLEW = SLOW ;
+NET "rw" LOC = "AC10" | IOSTANDARD = LVCMOS33 | DRIVE = 4 | SLEW = SLOW ;
+# The LCD four-bit data interface is shared with the StrataFlash.
+NET "nibble<0>" LOC = "T9" | IOSTANDARD = LVCMOS33 | DRIVE = 4 | SLEW = SLOW ;
+NET "nibble<1>" LOC = "G7" | IOSTANDARD = LVCMOS33 | DRIVE = 4 | SLEW = SLOW ;
+NET "nibble<2>" LOC = "G6" | IOSTANDARD = LVCMOS33 | DRIVE = 4 | SLEW = SLOW ;
+NET "nibble<3>" LOC = "T11" | IOSTANDARD = LVCMOS33 | DRIVE = 4 | SLEW = SLOW ; 
+# sf_e is default connected to 1
+
+NET "RegAddrEN" LOC = "U25";	//DIP SW 1	
+	
+NET "RegAddr<4>" LOC = "AF26";	//DIP SW 4 (msb)
+NET "RegAddr<3>" LOC = "AE27";	//DIP SW 5
+NET "RegAddr<2>" LOC = "AE26";	//DIP SW 6
+NET "RegAddr<1>" LOC = "AC25";	//DIP SW 7
+NET "RegAddr<0>" LOC = "AC24";	//DIP SW 8 (lsb)
