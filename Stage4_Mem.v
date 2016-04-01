@@ -46,6 +46,7 @@ assign WriteReg = WrReg;
 assign ResultRType = ALUResult;
 assign WBReg = WB;
 
-DATAMEM s0 (.MemWrite(MEM[1]),.MemRead(MEM[2]),.Addr(ALUResult),.Wdata(B),.Rdata(MemOp));
+//DATAMEM s0 (.MemWrite(MEM[1]),.MemRead(MEM[2]),.Addr(ALUResult),.Wdata(B),.Rdata(MemOp));
+
 //NextAddGen s1 (.Branch({MEM[3],MEM[0]}),.Equal(Equal),.PCSrc(PCSrc));
 endmodule

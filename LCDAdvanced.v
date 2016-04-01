@@ -63,7 +63,7 @@ begin
 	begin
 		count <= count+1;
 		
-		case (count[26:21])	///[26:21]
+		case (count[21:16])	///[26:21]
 		
 		//power on init can be carried out before this loop to avoid the flicker
 		0: code <= 6'h03; //power on init sequence
@@ -147,7 +147,7 @@ begin
 		
 		//refresh enable the led when bit 20 of the count is 1
 		//it flips when counted upto 1M and flips again after another 1M
-		refresh <= count[20]; //20 //flip rate around 24 Hz (1/f = 2^21*20ns)
+		refresh <= count[15]; //20 //flip rate around 24 Hz (1/f = 2^21*20ns)
 		sf_e <= 1;
 		{e, rs, rw, nibble } <=  {refresh, code};
 	end

@@ -58,12 +58,12 @@ assign PC_out = PC;
 
 ALU s1 (.ALUCon(4'b0010),.DataA(PC),.DataB(32'b100),.Result(PCPlus4));
 
-Mux32_2_1 s2 (.A((WriteEntry[2])?(PC_stage2+32'd4):(PCPlus4)),.B(PCPlus4PlusOff),.S(PCSrc[0]),.Out(NextPC));//nextPC takes care of branch or PC+4
-	
+//Mux32_2_1 s2 (.A((WriteEntry[2])?(PC_stage2+32'd4):(PCPlus4)),.B(PCPlus4PlusOff),.S(PCSrc[0]),.Out(NextPC));//nextPC takes care of branch or PC+4
+Mux32_2_1 s2 (.A(PCPlus4),.B(PCPlus4PlusOff),.S(PCSrc[0]),.Out(NextPC));//nextPC takes care of branch or PC+4
 wire [31:0] PC_predicted;
 
-assign FinalPC = ((WriteEntry == 3'b000) && FindinBTB && taken )?(PC_predicted):((ChooseEPC == 1'b1)?(ExceptionResumeAddr):((PCSrc[1])?(JmpAddr):(NextPC)));
-
+//assign FinalPC = ((WriteEntry == 3'b000) && FindinBTB && taken )?(PC_predicted):((ChooseEPC == 1'b1)?(ExceptionResumeAddr):((PCSrc[1])?(JmpAddr):(NextPC)));
+assign FinalPC = (ChooseEPC == 1'b1)?(ExceptionResumeAddr):((PCSrc[1])?(JmpAddr):(NextPC));
 always @ (posedge clk)                                                                      
 begin
 	if(reset)
@@ -80,17 +80,19 @@ begin
 end
 
 //---------------------------BTB---------------------------------------------------
-Branch_Target_Buffer BTB (
-.PC(PC),
-.PC_ip(PC_stage2),
-.PC_predicted_ip(PCPlus4PlusOff),
-.taken_ip(PCSrc[0]),
-.PC_predicted(PC_predicted),
-.taken(taken),
-.WriteEntry(WriteEntry&{3{PCWrite}}),
-.FindinBTB(FindinBTB),
-.clk(clk)
-);
+assign FindinBTB = 0;
+assign taken=0;
+//Branch_Target_Buffer BTB (
+//.PC(PC),
+//.PC_ip(PC_stage2),
+//.PC_predicted_ip(PCPlus4PlusOff),
+//.taken_ip(PCSrc[0]),
+//.PC_predicted(PC_predicted),
+//.taken(taken),
+//.WriteEntry(WriteEntry&{3{PCWrite}}),
+//.FindinBTB(FindinBTB),
+//.clk(clk)
+//);
 
 //---------------------------------------------------------------------------------
  

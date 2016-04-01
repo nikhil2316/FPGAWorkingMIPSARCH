@@ -57,7 +57,7 @@ debouncer debouncePB (
     .PB_state(core_clk)
     );
 
-//assign core_clk = clk_PB;
+//assign core_clk = clk_PB;///-----------TAKE CARE OF THIS----------------------////
 
 wire [31:0] PC;
 wire [31:0] RegisterContent;
@@ -66,26 +66,49 @@ wire [4:0] RegisterNo;
 //Inst Mem
 reg [7:0] InstMem [0:47];	//12 Instruction could run (12*4 = 48)
 
-always @ (posedge Master_clk)
-begin
-	if(reset)
-	begin
+//always @ (posedge Master_clk)
+//begin
+//	if(reset)
+//	begin
+//	
+//		//Fill Inst Mem
+//	{InstMem[0], InstMem[1], InstMem[2], InstMem[3]} =32'b001000_00000_00001_00000_00000_000101;//r1=5+r0;  //addi		I
+//	{InstMem[4], InstMem[5], InstMem[6], InstMem[7]} =32'b101011_00000_00001_00000_00000_000000;//mem[0]=r1;  //sw		I
+																	//32'b001000_00000_00010_00000_00000_000101;//r2=5+r0
+//	{InstMem[8], InstMem[9], InstMem[10], InstMem[11]} =32'b100011_00000_00010_00000_00000_000000;//r2=mem[0];  //lw	R
+//	{InstMem[12], InstMem[13], InstMem[14], InstMem[15]} =32'b000000_00000_00010_00001_00000_100000;//r1=r2+r0;	 	R  NOP
+//	{InstMem[16], InstMem[17], InstMem[18], InstMem[19]} =32'b000000_00000_00011_00010_00000_100000;//r2=r3+r0;  //and	R
+//	////////////////////////////////////////////////////////////////////////////////////////////////////
+//	{InstMem[20], InstMem[21], InstMem[22], InstMem[23]} =32'b001101_00001_01000_00000_00000_000110;//r8=(r1|6);		I
+//	{InstMem[24], InstMem[25], InstMem[26], InstMem[27]} =32'b000000_00001_00101_01001_00000_101010;//r9=(r1<r5)?(1):(0);	R
+//	{InstMem[28], InstMem[29], InstMem[30], InstMem[31]} =32'b000000_00000_00000_00000_00000_100000;//r4=~(r1|r5);
+
 	
-		//Fill Inst Mem
-	{InstMem[0], InstMem[1], InstMem[2], InstMem[3]} =32'b001000_00000_00101_00000_00000_000101;//r5=5+r0;  //addi		I
-	{InstMem[4], InstMem[5], InstMem[6], InstMem[7]} =32'b001000_00101_00001_00000_00000_000100;//r1=4+r5;  //addi		I
-	{InstMem[8], InstMem[9], InstMem[10], InstMem[11]} =32'b000000_00001_00101_00111_00000_100000;//r7=r1 + r5;  	R
-	{InstMem[12], InstMem[13], InstMem[14], InstMem[15]} =32'b000000_00101_00001_00110_00000_100010;//r6=r5-r1;	 	R  NOP
-	{InstMem[16], InstMem[17], InstMem[18], InstMem[19]} =32'b000000_00101_00111_00100_00000_100000;//r4=r7+r5;  //and	R
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	{InstMem[20], InstMem[21], InstMem[22], InstMem[23]} =32'b001101_00001_01000_00000_00000_000110;//r8=(r1|6);		I
-	{InstMem[24], InstMem[25], InstMem[26], InstMem[27]} =32'b000000_00001_00101_01001_00000_101010;//r9=(r1<r5)?(1):(0);	R
-	{InstMem[28], InstMem[29], InstMem[30], InstMem[31]} =32'b000000_00000_00000_00000_00000_100000;//r4=~(r1|r5); 
-	end
-end
+//	end
+//end
 
 wire [31:0] Instruction;
-assign Instruction = {InstMem[PC + 0], InstMem[PC + 1], InstMem[PC + 2], InstMem[PC + 3]};
+
+InstMem InsTMEM (
+  .clka(~core_clk), // input clka
+  .wea(1'b0), // input [0 : 0] wea
+  .addra(PC), // input [5 : 0] addra
+  .dina(32'b1), // input [31 : 0] dina
+  .douta(Instruction) // output [31 : 0] douta
+);
+
+
+//assign Instruction = {InstMem[PC + 0], InstMem[PC + 1], InstMem[PC + 2], InstMem[PC + 3]};
+
+wire [3:0] MEMReg_s5;
+wire [31:0] DataAddr, DataIn, DataOut;
+DataMem DATAMEM (
+  .clka(~core_clk), // input clka
+  .wea(MEMReg_s5[1]), // input [0 : 0] wea
+  .addra(DataAddr), // input [6 : 0] addra
+  .dina(DataOut), // input [31 : 0] dina
+  .douta(DataIn) // output [31 : 0] douta
+);
 
 Mips_Pip_CPU_Orig CORE1 (
     .clk(core_clk), 
@@ -93,8 +116,10 @@ Mips_Pip_CPU_Orig CORE1 (
     .RegisterNo(RegisterNo), 
     .PC(PC), 
     .Instruction(Instruction), 
-    .DataAddr(), 
-    .Data(), 
+    .DataAddr(DataAddr), 
+    .DataIn(DataIn),
+	 .DataOut(DataOut),
+	 .MEMReg_s5(MEMReg_s5),
     .reset(reset),
 	 .RegAddr(RegAddr),
 	 .RegData(RegData)

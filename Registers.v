@@ -43,24 +43,36 @@ begin : necessary_initialization
 			regfile[i] = 0;
 end    
 
-always@(clock,InData,WrReg,WE) begin
-      if(WE && clock && WrReg != 0)  begin  	
-			regfile[WrReg]<=InData;//write to register
-			$display("Does WrReg: %d Data: %d",WrReg,InData);
-		end
-end
-
-always @ (clock,ReadA,ReadB,WrReg) begin
-		if(~clock) begin
-			OutA <= regfile[ReadA];//read values from registers
-			OutB <= regfile[ReadB];
-			$monitor ("R0: %d R1: %d R2: %d R3: %d R4: %d R5 %d R6: %d R7: %d R8 %d R9: %d R10: %d R11 %d R12: %d R13: %d R14 %d",regfile[0],regfile[1],regfile[2],regfile[3],regfile[4],regfile[5],regfile[6],regfile[7],regfile[8],regfile[9],regfile[10],regfile[11],regfile[12],regfile[13],regfile[14]);
-		end
-end 
-
-always
+//always@(clock,InData,WrReg,WE) begin
+//      if(WE && clock && WrReg != 0)  begin  	
+//			regfile[WrReg]=InData;//write to register
+//			$display("Does WrReg: %d Data: %d",WrReg,InData);
+//		end
+//end
+always @ (negedge clock)
 begin
-	RegData = regfile[RegAddr];
+	if(WE && WrReg!=0)
+	begin
+					regfile[WrReg]=InData;//write to register
+			$display("Does WrReg: %d Data: %d",WrReg,InData);
+	end
 end
+
+//always @ (clock,ReadA,ReadB,WrReg) begin
+//		if(~clock) begin
+//			OutA = regfile[ReadA];//read values from registers
+//			OutB = regfile[ReadB];
+//			RegData = regfile[RegAddr];
+//			$monitor ("R0: %d R1: %d R2: %d R3: %d R4: %d R5 %d R6: %d R7: %d R8 %d R9: %d R10: %d R11 %d R12: %d R13: %d R14 %d",regfile[0],regfile[1],regfile[2],regfile[3],regfile[4],regfile[5],regfile[6],regfile[7],regfile[8],regfile[9],regfile[10],regfile[11],regfile[12],regfile[13],regfile[14]);
+//		end
+//end 
+
+always @ (negedge clock)
+begin
+	OutA = (WrReg != 0 && WE && WrReg == ReadA)?(InData):(regfile[ReadA]);
+	OutB = (WrReg != 0 && WE && WrReg == ReadB)?(InData):(regfile[ReadB]);
+	RegData = (WrReg != 0 && WE && WrReg == RegAddr)?(InData):(regfile[RegAddr]);
+end
+
 
 endmodule

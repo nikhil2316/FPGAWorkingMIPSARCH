@@ -38,7 +38,8 @@ output [31:0] Result;
 output [4:0] DestRegReg; 
 output RegWrite;
 
-Mux32_2_1 s0 (.B(MemOp),.A(ResultRType),.S(WB[0]),.Out(Result));
+//Mux32_2_1 s0 (.B(MemOp),.A(ResultRType),.S(WB[0]),.Out(Result));
+assign Result = (WB[0])?(MemOp):(ResultRType);
 assign RegWrite = WB[1]&(~reset);
 assign DestRegReg = DestReg;
 

@@ -24,8 +24,12 @@ RegisterContent,
 RegisterNo,
 PC,
 Instruction,
+//DataMem
 DataAddr,
-Data,
+DataIn,
+DataOut,
+MEMReg_s5,
+//////
 reset,
 
 //Register Ports
@@ -34,11 +38,11 @@ RegData
  );
  
 input clk, reset;
-input [31:0] Instruction, Data;
+input [31:0] Instruction, DataIn;
 
 output [31:0] RegisterContent;
 output [4:0] RegisterNo;
-output [31:0] PC, DataAddr;
+output [31:0] PC, DataAddr,DataOut;
 
 
 //for exception handling
@@ -133,13 +137,18 @@ ExceptionBlock #(Flag_Width) EXP (.Flag_EX(Flag),
 wire [31:0] PCPlus4PlusOffReg/*,ResultReg*/,B_Reg;
 wire EqualReg;
 wire [4:0] WrRegReg;
-wire [3:0] MEMReg_s5;
+output [3:0] MEMReg_s5;
 wire [1:0] WBReg_s5;
 EXMem s5 (.PCPlus4PlusOff(PCPlus4PlusOff),.Equal(Equal),.Result(Result),.OutB(B),.WrReg(WriteReg),.WB(WBReg_s4),.MEM(MEMReg_s4),.EX_Mem_Flush_excep(EX_Mem_Flush),.PCPlus4PlusOffReg(PCPlus4PlusOffReg),.EqualReg(EqualReg),.ResultReg(ResultReg),.OutBReg(B_Reg),.WrRegReg(WrRegReg),.WBReg(WBReg_s5),.MEMReg(MEMReg_s5),.clk(clk),.reset(reset));
 
 wire[31:0] MemOp,ResultRType;
 wire [4:0] DestReg;
 wire [1:0] WBReg_s6;
+
+assign DataAddr = ResultReg;
+assign DataOut = B_Reg;
+assign MemOp = DataIn;
+
 Stage4 s6 (.PCPlus4PlusOff(PCPlus4PlusOffReg),
 .ALUResult(ResultReg),
 .B(B_Reg),
@@ -147,9 +156,10 @@ Stage4 s6 (.PCPlus4PlusOff(PCPlus4PlusOffReg),
 .WB(WBReg_s5),
 .MEM(MEMReg_s5),
 .WriteReg(DestReg),
-.MemOp(MemOp),
+.MemOp(/*MemOp*/),
 .ResultRType(ResultRType),
 .WBReg(WBReg_s6)
+//,.clk(clk)
 );
 
 wire [31:0] MemOpReg,ResultRTypeReg;
