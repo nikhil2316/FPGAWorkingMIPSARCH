@@ -37,7 +37,9 @@ MEMReg,
 clk,
 reset,
 IOInst,
-IOInstReg
+IOInstReg,
+Halt,
+HaltReg
     );
 
 input [31:0] PCPlus4PlusOff,Result,OutB;
@@ -58,6 +60,9 @@ reg [4:0] WrRegReg;
 reg [3:0] MEMReg;
 reg [1:0] WBReg;
 
+input Halt;
+output reg HaltReg;
+
 always @ (posedge clk)
 begin
 	if(reset)
@@ -70,6 +75,7 @@ begin
 			MEMReg <= 4'd0;
 			WBReg <= 2'd0;
 			IOInstReg <= 0;
+			HaltReg <= 0;
 	end
 	else
 	begin
@@ -83,6 +89,7 @@ begin
 			MEMReg <= 4'd0;
 			WBReg <= 2'd0;
 			IOInstReg <= 0;
+			HaltReg <= 0;
 		end
 		else
 		begin
@@ -94,6 +101,7 @@ begin
 			MEMReg <= MEM;
 			WBReg <= WB;
 			IOInstReg <= IOInst;
+			HaltReg <= Halt;
 		end
 	end
 end

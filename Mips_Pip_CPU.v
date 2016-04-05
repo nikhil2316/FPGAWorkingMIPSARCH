@@ -19,7 +19,7 @@
 //
 //////////////////////////////////////////////////////////////////////////////////
 module Mips_Pip_CPU_Orig(
-clk,
+clock,
 RegisterContent,
 RegisterNo,
 PC,
@@ -41,10 +41,11 @@ RegData,
 //InterruptHandling
 NMI,
 NMI_ACK,
-NMI_ID
+NMI_ID,
+RSM
  );
  
-input clk, reset;
+input clock, reset;
 input [31:0] Instruction, DataIn;
 
 output [31:0] RegisterContent;
@@ -54,11 +55,14 @@ output ipbar_op; //We'll take care of it later
 
 inout [31:0] Port;
 
+input RSM;//Resume Pin, it has to be high for atlest 2 clk periods
 //Interrupt Handling
 input NMI;
 output NMI_ACK;
 reg NMI_ACK;
 input [1:0] NMI_ID;
+
+wire clk;
 
 //for exception handling
 parameter MEM_SIZE = 32'd512;// Inst Mem size
@@ -103,8 +107,8 @@ wire [1:0] FwdA, FwdB;
 
 input [4:0] RegAddr;
 output [31:0] RegData;
-wire IOInst;
-stage2 s2 (.Inst(InstReg),.PCPlus4(PCPlus4Reg),.WrReg(WrReg),.Pipe_stall(Pipe_stall),.InData(InData),.FwdA(FwdA),.FwdB(FwdB),.ALUop_inMEM(ResultReg)/*,.MUXop_inWB(InData)*/,.PCPlus4PlusOff(PCPlus4PlusOffset),.WE(RegWrite),.OutA(OutA),.OutB(OutB),.PCPlus4Reg(/*PCPlus4Reg_s2*/),.SignExtImme(SignExtImme),.Rt(Rt),.Rd(Rd), .Rs(Rs),.WB(WB),.MEM(MEM),.EX(EX),.Equal(Equal),.UndefInst(UndefInst),.clk(clk),.RegData(RegData),.RegAddr(RegAddr),.IOInst(IOInst));
+wire IOInst,Halt;
+stage2 s2 (.Inst(InstReg),.PCPlus4(PCPlus4Reg),.WrReg(WrReg),.Pipe_stall(Pipe_stall),.InData(InData),.FwdA(FwdA),.FwdB(FwdB),.ALUop_inMEM(ResultReg)/*,.MUXop_inWB(InData)*/,.PCPlus4PlusOff(PCPlus4PlusOffset),.WE(RegWrite),.OutA(OutA),.OutB(OutB),.PCPlus4Reg(/*PCPlus4Reg_s2*/),.SignExtImme(SignExtImme),.Rt(Rt),.Rd(Rd), .Rs(Rs),.WB(WB),.MEM(MEM),.EX(EX),.Equal(Equal),.UndefInst(UndefInst),.clk(clk),.RegData(RegData),.RegAddr(RegAddr),.IOInst(IOInst),.Halt(Halt));
 
 
 //////////////////////////\\\\\\Control Resolving Unit\\\\///////////////////////////////////////
@@ -130,8 +134,8 @@ begin
 	PCPlus4RegLatched <= PCPlus4Reg;
 end
 
-
-IDEX s3 (.PCPlus4(PCPlus4RegLatched),.A(OutA),.B(OutB),.SignExtImme(SignExtImme),.Rt(Rt),.Rd(Rd), .Rs(Rs),.WB(WB),.MEM(MEM),.EX(EX),.ID_EX_Flush_excep(ID_EX_Flush),.PCPlus4Reg(PCPlus4Reg_s3),.AReg(AReg),.BReg(BReg),.SignExtImmeReg(SignExtImmeReg),.RtReg(RtReg),.RdReg(RdReg),.RsReg(RsReg),.WBReg(WBReg),.MEMReg(MEMReg),.EXReg(EXReg),.clk(clk),.reset(reset),.IOInst(IOInst),.IOInstReg(IOInstReg_s3));
+wire HaltReg_s3;
+IDEX s3 (.PCPlus4(PCPlus4RegLatched),.A(OutA),.B(OutB),.SignExtImme(SignExtImme),.Rt(Rt),.Rd(Rd), .Rs(Rs),.WB(WB),.MEM(MEM),.EX(EX),.ID_EX_Flush_excep(ID_EX_Flush),.PCPlus4Reg(PCPlus4Reg_s3),.AReg(AReg),.BReg(BReg),.SignExtImmeReg(SignExtImmeReg),.RtReg(RtReg),.RdReg(RdReg),.RsReg(RsReg),.WBReg(WBReg),.MEMReg(MEMReg),.EXReg(EXReg),.clk(clk),.reset(reset),.IOInst(IOInst),.IOInstReg(IOInstReg_s3),.Halt(Halt),.HaltReg(HaltReg_s3));
 
 ///////////Interrupt Synchronization//////////////////
 reg NMIReg; //sync NMI
@@ -243,8 +247,8 @@ wire [4:0] WrRegReg;
 //output [3:0] MEMReg_s5;
 wire [3:0] MEMReg_s5;
 wire [1:0] WBReg_s5;
-wire IOInstReg_s5;
-EXMem s5 (.PCPlus4PlusOff(PCPlus4PlusOff),.Equal(Equal),.Result(Result),.OutB(B),.WrReg(WriteReg),.WB(WBReg_s4),.MEM(MEMReg_s4),.EX_Mem_Flush_excep(EX_Mem_Flush),.PCPlus4PlusOffReg(PCPlus4PlusOffReg),.EqualReg(EqualReg),.ResultReg(ResultReg),.OutBReg(B_Reg),.WrRegReg(WrRegReg),.WBReg(WBReg_s5),.MEMReg(MEMReg_s5),.clk(clk),.reset(reset),.IOInst(IOInstReg_s3),.IOInstReg(IOInstReg_s5));
+wire IOInstReg_s5,HaltReg_s5;
+EXMem s5 (.PCPlus4PlusOff(PCPlus4PlusOff),.Equal(Equal),.Result(Result),.OutB(B),.WrReg(WriteReg),.WB(WBReg_s4),.MEM(MEMReg_s4),.EX_Mem_Flush_excep(EX_Mem_Flush),.PCPlus4PlusOffReg(PCPlus4PlusOffReg),.EqualReg(EqualReg),.ResultReg(ResultReg),.OutBReg(B_Reg),.WrRegReg(WrRegReg),.WBReg(WBReg_s5),.MEMReg(MEMReg_s5),.clk(clk),.reset(reset),.IOInst(IOInstReg_s3),.IOInstReg(IOInstReg_s5),.Halt(HaltReg_s3),.HaltReg(HaltReg_s5));
 
 wire[31:0] MemOp,ResultRType;
 wire [4:0] DestReg;
@@ -275,6 +279,7 @@ Stage4 s6 (.PCPlus4PlusOff(PCPlus4PlusOffReg),
 wire [31:0] MemOpReg,ResultRTypeReg;
 wire [4:0] DestRegReg;
 wire [1:0] WBReg_s7;
+wire HaltReg_s7;
 MemWB s7 (
 .MemOp(MemOp),
 .ResultRType(ResultRType),
@@ -285,7 +290,16 @@ MemWB s7 (
 .WrRegReg(DestRegReg),
 .WBReg(WBReg_s7),
 .clk(clk),
-.reset(reset));
+.reset(reset),
+.Halt(HaltReg_s5),
+.HaltReg(HaltReg_s7)
+);
+
+//////////////////HLT Logic/////////////
+wire stop_clk;
+assign clk= clock|stop_clk;
+assign stop_clk = (HaltReg_s7)?(~RSM):(0);
+//////////////////////////////////////
 
 //wire [31:0] FResult;
 stage5 s8 (

@@ -28,7 +28,9 @@ ResultRTypeReg,
 WrRegReg,
 WBReg,
 clk,
-reset
+reset,
+Halt,
+HaltReg
     );
 
 input [31:0] MemOp,ResultRType;
@@ -43,6 +45,9 @@ output [1:0] WBReg;
 reg [31:0] MemOpReg,ResultRTypeReg;
 reg [4:0] WrRegReg;
 reg [1:0] WBReg;
+
+input Halt;
+output reg HaltReg;
 //assign WBReg = WB;
 
 always @ (posedge clk)
@@ -53,6 +58,7 @@ begin
 		ResultRTypeReg <= 0;
 		WrRegReg <= 0;
 		WBReg <= 0;
+		HaltReg <= 0;
 	end
 	else
 	begin
@@ -60,6 +66,7 @@ begin
 		ResultRTypeReg <= ResultRType;
 		WrRegReg <= WrReg;
 		WBReg <= WB;
+		HaltReg <= Halt;
 	end
 end
 

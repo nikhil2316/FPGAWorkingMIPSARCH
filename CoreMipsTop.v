@@ -38,7 +38,8 @@ ipbar_op,
 Port,
 NMI,
 NMI_ID,
-NMI_ACK
+NMI_ACK,
+RSM
     );
 
 	input Master_clk;		//100 MHz Clk "AH15"
@@ -97,8 +98,9 @@ inout [31:0] Port;
 input NMI;
 input [1:0] NMI_ID;
 output NMI_ACK;
+input RSM;
 Mips_Pip_CPU_Orig CORE1 (
-    .clk(core_clk), 
+    .clock(core_clk), 
     .RegisterContent(RegisterContent), 
     .RegisterNo(RegisterNo), 
     .PC(PC), 
@@ -115,7 +117,8 @@ Mips_Pip_CPU_Orig CORE1 (
 	 .Port(Port),
 	 .NMI(NMI),
 	 .NMI_ID(NMI_ID),
-	 .NMI_ACK(NMI_ACK)
+	 .NMI_ACK(NMI_ACK),
+	 .RSM(RSM)
     );
 
 wire Sign;

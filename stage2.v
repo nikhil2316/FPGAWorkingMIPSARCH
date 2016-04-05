@@ -45,7 +45,8 @@ UndefInst,
 clk,
 RegAddr,
 RegData,
-IOInst
+IOInst,
+Halt
     );
 
 input [31:0] Inst,PCPlus4,InData;
@@ -60,7 +61,9 @@ output [3:0] MEM;
 output [1:0] WB;
 output [4:0] Rt,Rd,Rs;
 output Equal, UndefInst;
+output Halt;
 
+assign Halt=(Inst[31:26]==6'h3F)?(1'b1):(1'b0);
 
 wire [31:0] A, B;
 assign PCPlus4Reg = PCPlus4;

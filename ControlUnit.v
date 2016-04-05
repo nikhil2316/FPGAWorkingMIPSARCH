@@ -118,6 +118,11 @@ begin
 								CFlag <= 9'b0_0_1_01_x_1_0_1;
 								UndefInst <= 1'b0;
 				end
+				6'b11_1111 ://HLT 
+				begin
+								CFlag <= 9'b0_0_0_00_0_0_0_0;
+								UndefInst <= 1'b0;
+				end
 				default://undefined Instruction
 				begin
 								UndefInst <= 1'b1;
