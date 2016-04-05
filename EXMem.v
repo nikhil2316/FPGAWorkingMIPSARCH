@@ -35,23 +35,25 @@ WrRegReg,
 WBReg,
 MEMReg,
 clk,
-reset
+reset,
+IOInst,
+IOInstReg
     );
 
 input [31:0] PCPlus4PlusOff,Result,OutB;
-input Equal,clk, EX_Mem_Flush_excep,reset;
+input Equal,clk, EX_Mem_Flush_excep,reset,IOInst;
 input [4:0] WrReg;
 input [3:0] MEM;
 input [1:0] WB;
 
 output [31:0] PCPlus4PlusOffReg,ResultReg,OutBReg;
-output EqualReg;
+output EqualReg,IOInstReg;
 output [4:0] WrRegReg;
 output [3:0] MEMReg;
 output [1:0] WBReg;
 
 reg [31:0] PCPlus4PlusOffReg,ResultReg,OutBReg;
-reg EqualReg;
+reg EqualReg,IOInstReg;
 reg [4:0] WrRegReg;
 reg [3:0] MEMReg;
 reg [1:0] WBReg;
@@ -67,6 +69,7 @@ begin
 			WrRegReg <= 0;
 			MEMReg <= 4'd0;
 			WBReg <= 2'd0;
+			IOInstReg <= 0;
 	end
 	else
 	begin
@@ -79,6 +82,7 @@ begin
 			WrRegReg <= WrReg;
 			MEMReg <= 4'd0;
 			WBReg <= 2'd0;
+			IOInstReg <= 0;
 		end
 		else
 		begin
@@ -89,6 +93,7 @@ begin
 			WrRegReg <= WrReg;
 			MEMReg <= MEM;
 			WBReg <= WB;
+			IOInstReg <= IOInst;
 		end
 	end
 end

@@ -21,52 +21,47 @@
 module ExceptionBlock(
 Flag_EX,
 Flag_ID,
-PCInterrupted,
+PCInterruptedinEX,
+PCInterruptedinID,
 EPC,
 Cause,
 EX_Mem_Flush,
 ID_EX_Flush,
 IF_ID_Flush,
 ChooseEPC,
-reset
+clk,
+reset,
+Excep_IntAddr,
+NMI,
+NMI_ID
     );
-
+//EPC is ResumeAddr-----------
 parameter Flag_Width = 3;
+`include "ExceptionInterruptHandlerParameters.v"
 input [Flag_Width-1:0] Flag_EX;
-input Flag_ID, reset/*{UndefInst}*/;
-input [31:0] PCInterrupted;
+input Flag_ID, reset/*{UndefInst}*/, clk ,NMI;
+input [31:0] PCInterruptedinEX,PCInterruptedinID;
+input [1:0] NMI_ID;
 
-output [31:0] EPC;
+output [31:0] EPC, Excep_IntAddr;
 output Cause;
 output EX_Mem_Flush, ID_EX_Flush, IF_ID_Flush;
 output ChooseEPC;
-//reg [31:0] EPC;
+reg [31:0] EPC,EPCReg, Excep_IntAddr;
 reg Cause;
 reg EX_Mem_Flush, ID_EX_Flush, IF_ID_Flush;
 reg ChooseEPC;
 
-wire [31:0] PcInterruptedAct;
-//assign PcInterruptedAct = PCInterrupted - 32'd4;
-wire [3:0] ALU_sub;
-wire [31:0] FOUR;
+reg [31:0] PCInterruptedinEXLatched,PCInterruptedinIDLatched;
 
-assign ALU_sub = 4'b0110;
-assign FOUR = 32'b100;
+always @ (negedge clk)
+begin
+	PCInterruptedinEXLatched <= PCInterruptedinEX;
+	PCInterruptedinIDLatched <= PCInterruptedinID;
+end
 
-ALU s1 (.ALUCon(ALU_sub),.DataA(PCInterrupted),.DataB(FOUR),.Result(EPC));
-
-//initial
-//begin
-//	EX_Mem_Flush <= 1'b0;//0-> dont flush
-//	ID_EX_Flush <= 1'b0;
-//	IF_ID_Flush <= 1'b0;
-//	
-//	//EPC <= 32'bx;
-//	Cause <= 1'bx;
-//	ChooseEPC <= 1'b0; //dont choose EPC
-//end
-
-always @ (Flag_EX, Flag_ID, PcInterruptedAct,reset)
+	
+always @ ( Flag_EX[1], Flag_ID, reset, NMI, NMI_ID)
 begin
 	if(reset)
 	begin
@@ -74,9 +69,21 @@ begin
 		ID_EX_Flush <= 1'b0;
 		IF_ID_Flush <= 1'b0;
 	
-	//EPC <= 32'bx;
+		EPCReg <= 32'd0;
 		Cause <= 1'bx;
 		ChooseEPC <= 1'b0; //dont choose EPC
+		Excep_IntAddr <=32'd0;
+	end
+	else if (NMI)
+	begin
+		EX_Mem_Flush <= 1'b1;/////////////////
+		ID_EX_Flush <= 1'b1;
+		IF_ID_Flush	<= 1'b1;
+		//flush all
+		EPCReg <= PCInterruptedinEXLatched - 4'd4; // This instruction we might want to restart
+		Cause <= 1'bx;
+		ChooseEPC <= 1'b1;///
+		Excep_IntAddr <= (NMI_ID == 2'b00)?(INT_00):((NMI_ID == 2'b01)?(INT_01):((NMI_ID == 2'b10)?(INT_10):(INT_11)));
 	end
 	else if (Flag_EX[1] == 1'b1) // overflow
 	begin
@@ -84,9 +91,10 @@ begin
 		ID_EX_Flush <= 1'b1;
 		IF_ID_Flush	<= 1'b1;
 		//flush all
-		//EPC <= PcInterruptedAct;
+		EPCReg <= PCInterruptedinEXLatched - 4'd4; // This instruction we might want to restart
 		Cause <= 1'b1;
 		ChooseEPC <= 1'b1;///
+		Excep_IntAddr <= EXP_OVFLOW;
 	end
 	else if (Flag_ID == 1'b1)//undef_inst
 	begin
@@ -94,9 +102,10 @@ begin
 		ID_EX_Flush <= 1'b1;
 		IF_ID_Flush	<= 1'b1;
 		//flush all but EX_Mem
-		//EPC <= PcInterruptedAct;
+		EPCReg <= PCInterruptedinIDLatched;//at PCInterruptedinID - 4'd4 , UndefInst will be present , we dont want to run this inst again as this in an undef inst
 		Cause <= 1'b0;
 		ChooseEPC <= 1'b1;///
+		Excep_IntAddr <=  EXP_UNDEF;
 	end
 	else
 	begin
@@ -104,10 +113,15 @@ begin
 		ID_EX_Flush <= 1'b0;
 		IF_ID_Flush	<= 1'b0;
 		
-	//	EPC <= 32'bx;
+		//EPC <= EPC;
 		Cause <= 1'bx;
 		ChooseEPC <= 1'b0;
 	end
 end
+
+always @ (posedge clk)
+	EPC <= EPCReg;
+
+
 
 endmodule

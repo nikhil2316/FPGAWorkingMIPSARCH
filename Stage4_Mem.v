@@ -28,13 +28,15 @@ MEM,
 WriteReg,
 MemOp,
 ResultRType,
-WBReg
+WBReg,
+IOInst
     );
 
 input [31:0] PCPlus4PlusOff,ALUResult,B;
 input [4:0] WrReg;
 input [3:0] MEM;
 input [1:0] WB;
+input IOInst;
 
 output[31:0] MemOp,ResultRType;
 output [4:0] WriteReg;

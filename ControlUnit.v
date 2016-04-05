@@ -103,6 +103,21 @@ begin
 								CFlag <= 9'b0_1_1_01_0_0_0_0;
 								UndefInst <= 1'b0;
 				end
+				6'b00_0011 ://jumpV
+				begin
+								CFlag <= 9'b0_1_1_01_0_0_0_0;
+								UndefInst <= 1'b0;
+				end
+				6'b10_0100 ://IN similar to lw 
+				begin
+								CFlag <= 9'b0_1_1_01_0_0_1_1;
+							   UndefInst <= 1'b0;
+				end
+				6'b10_1100 ://OUT similar to sw 
+				begin
+								CFlag <= 9'b0_0_1_01_x_1_0_1;
+								UndefInst <= 1'b0;
+				end
 				default://undefined Instruction
 				begin
 								UndefInst <= 1'b1;

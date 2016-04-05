@@ -44,7 +44,8 @@ Equal,
 UndefInst,
 clk,
 RegAddr,
-RegData
+RegData,
+IOInst
     );
 
 input [31:0] Inst,PCPlus4,InData;
@@ -75,6 +76,9 @@ assign Equal = (A==B)?(1'b1):(1'b0);
 
 input [4:0] RegAddr;
 output [31:0] RegData;
+
+output IOInst;
+assign IOInst = (Inst[31:26]==6'b10_0100 || Inst[31:26]==6'b10_1100)?(1'b1):(1'b0);
 
 Registers s0 (.clock(clk),.WE(WE),.InData(InData),.WrReg(WrReg),.ReadA(Inst[25:21]),.ReadB(Inst[20:16]),.OutA(OutA),.OutB(OutB),.RegAddr(RegAddr),.RegData(RegData));
 ControlUnit s1 (.Inst(Inst),.Pipe_stall(Pipe_stall),.Branch({MEM[3],MEM[0]}),.RegWrite(WB[1]),.ALUSrc(EX[3]),.RegDst(EX[2]),.MemW(MEM[1]),.MemR(MEM[2]),.MemToReg(WB[0]),.ALUOp(EX[1:0]),.UndefInst(UndefInst));

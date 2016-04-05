@@ -41,12 +41,14 @@ WBReg,
 MEMReg,
 EXReg,
 clk,
-reset
+reset,
+IOInst,
+IOInstReg
     );
 
 input [31:0] PCPlus4, A,B,SignExtImme;
 input [4:0] Rt,Rd,Rs;
-input clk, ID_EX_Flush_excep, reset;
+input clk, ID_EX_Flush_excep, reset,IOInst;
 input [3:0] EX;
 input [3:0] MEM;
 input [1:0] WB;
@@ -56,11 +58,13 @@ output [4:0] RtReg,RdReg,RsReg;
 output [3:0] EXReg;
 output [3:0] MEMReg;
 output [1:0] WBReg;
+output IOInstReg;
 reg [31:0] PCPlus4Reg,AReg,BReg,SignExtImmeReg;
 reg [4:0] RtReg,RdReg,RsReg;
 reg [3:0] EXReg;
 reg [3:0] MEMReg;
 reg [1:0] WBReg;
+reg IOInstReg;
 
 always @ (posedge clk)
 begin
@@ -70,6 +74,7 @@ begin
 			EXReg <= 4'd0; //set control signals zero turn it in NOP
 			MEMReg <= 4'd0;
 			WBReg <= 2'd0;
+			IOInstReg <= 0;
 	end
 	else
 	begin
@@ -85,6 +90,7 @@ begin
 			EXReg <= 4'd0; //set control signals zero turn it in NOP
 			MEMReg <= 4'd0;
 			WBReg <= 2'd0;
+			IOInstReg <= 0;
 		end
 		else
 		begin
@@ -98,6 +104,7 @@ begin
 			EXReg <= EX;
 			MEMReg <= MEM;
 			WBReg <= WB;
+			IOInstReg <= IOInst;
 		end
 	end
 end

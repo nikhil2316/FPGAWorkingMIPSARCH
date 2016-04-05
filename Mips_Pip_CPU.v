@@ -28,13 +28,20 @@ Instruction,
 DataAddr,
 DataIn,
 DataOut,
-MEMReg_s5,
+//MEMReg_s5,
+DataMemWrite,
 //////
 reset,
-
+ipbar_op,
+Port,
 //Register Ports
 RegAddr,
-RegData
+RegData,
+
+//InterruptHandling
+NMI,
+NMI_ACK,
+NMI_ID
  );
  
 input clk, reset;
@@ -43,13 +50,21 @@ input [31:0] Instruction, DataIn;
 output [31:0] RegisterContent;
 output [4:0] RegisterNo;
 output [31:0] PC, DataAddr,DataOut;
+output ipbar_op; //We'll take care of it later
 
+inout [31:0] Port;
+
+//Interrupt Handling
+input NMI;
+output NMI_ACK;
+reg NMI_ACK;
+input [1:0] NMI_ID;
 
 //for exception handling
 parameter MEM_SIZE = 32'd512;// Inst Mem size
-parameter ExceptionAddr = MEM_SIZE - 32'd120;//leaving last 30 inst addresses
-
-wire [31:0] EPC; //to save PC of offending inst. Exception Program Counter
+//parameter ExceptionAddr = 32'd512;//set THIS FOR EXCEPTION HANDLING, Actually there should be 2 addrs, one for undef inst exception and other for overflow exception
+wire [31:0] ExceptionAddr;
+//wire [31:0] EPC; //to save PC of offending inst. Exception Program Counter
 wire Cause;//0->undefined inst. 1->overflow or underflow 
 //output [31:0] Address_Bus;
 wire EX_Mem_Flush, ID_EX_Flush, IF_ID_Flush;//for exception handling
@@ -88,7 +103,8 @@ wire [1:0] FwdA, FwdB;
 
 input [4:0] RegAddr;
 output [31:0] RegData;
-stage2 s2 (.Inst(InstReg),.PCPlus4(PCPlus4Reg),.WrReg(WrReg),.Pipe_stall(Pipe_stall),.InData(InData),.FwdA(FwdA),.FwdB(FwdB),.ALUop_inMEM(ResultReg)/*,.MUXop_inWB(InData)*/,.PCPlus4PlusOff(PCPlus4PlusOffset),.WE(RegWrite),.OutA(OutA),.OutB(OutB),.PCPlus4Reg(PCPlus4Reg_s2),.SignExtImme(SignExtImme),.Rt(Rt),.Rd(Rd), .Rs(Rs),.WB(WB),.MEM(MEM),.EX(EX),.Equal(Equal),.UndefInst(UndefInst),.clk(clk),.RegData(RegData),.RegAddr(RegAddr));
+wire IOInst;
+stage2 s2 (.Inst(InstReg),.PCPlus4(PCPlus4Reg),.WrReg(WrReg),.Pipe_stall(Pipe_stall),.InData(InData),.FwdA(FwdA),.FwdB(FwdB),.ALUop_inMEM(ResultReg)/*,.MUXop_inWB(InData)*/,.PCPlus4PlusOff(PCPlus4PlusOffset),.WE(RegWrite),.OutA(OutA),.OutB(OutB),.PCPlus4Reg(/*PCPlus4Reg_s2*/),.SignExtImme(SignExtImme),.Rt(Rt),.Rd(Rd), .Rs(Rs),.WB(WB),.MEM(MEM),.EX(EX),.Equal(Equal),.UndefInst(UndefInst),.clk(clk),.RegData(RegData),.RegAddr(RegAddr),.IOInst(IOInst));
 
 
 //////////////////////////\\\\\\Control Resolving Unit\\\\///////////////////////////////////////
@@ -98,14 +114,96 @@ assign PC_stage2 = PCPlus4Reg - 32'd4;
 //////////////////////////-----------------------//////////////////////////////
 
 /////////////////////////Jmp Inst///////////////////////////////////////////////
-jmp_instr j (.Inst(InstReg), .PCPlus4(PCPlus4Reg), .PCSrc(PCSrc[1]), .JmpAddr(JmpAddr),.reset(reset));
+wire [31:0] ResumeAddr;
+jmp_instr j (.Inst(InstReg), .PCPlus4(PCPlus4Reg), .PCSrc(PCSrc[1]), .JmpAddr(JmpAddr),.ResumeAddr(ResumeAddr),.reset(reset));
 ///////////////////////////////////////////////////////////////////////////////////////
 wire [31:0] PCPlus4Reg_s3,AReg,BReg,SignExtImmeReg;
 wire [4:0] RtReg,RdReg,RsReg;
 wire [1:0] WBReg;
 wire [3:0] MEMReg;
 wire [3:0] EXReg;
-IDEX s3 (.PCPlus4(PCPlus4Reg_s2),.A(OutA),.B(OutB),.SignExtImme(SignExtImme),.Rt(Rt),.Rd(Rd), .Rs(Rs),.WB(WB),.MEM(MEM),.EX(EX),.ID_EX_Flush_excep(ID_EX_Flush),.PCPlus4Reg(PCPlus4Reg_s3),.AReg(AReg),.BReg(BReg),.SignExtImmeReg(SignExtImmeReg),.RtReg(RtReg),.RdReg(RdReg),.RsReg(RsReg),.WBReg(WBReg),.MEMReg(MEMReg),.EXReg(EXReg),.clk(clk),.reset(reset));
+wire IOInstReg_s3;
+
+reg [31:0] PCPlus4RegLatched;
+always @ (negedge clk)
+begin
+	PCPlus4RegLatched <= PCPlus4Reg;
+end
+
+
+IDEX s3 (.PCPlus4(PCPlus4RegLatched),.A(OutA),.B(OutB),.SignExtImme(SignExtImme),.Rt(Rt),.Rd(Rd), .Rs(Rs),.WB(WB),.MEM(MEM),.EX(EX),.ID_EX_Flush_excep(ID_EX_Flush),.PCPlus4Reg(PCPlus4Reg_s3),.AReg(AReg),.BReg(BReg),.SignExtImmeReg(SignExtImmeReg),.RtReg(RtReg),.RdReg(RdReg),.RsReg(RsReg),.WBReg(WBReg),.MEMReg(MEMReg),.EXReg(EXReg),.clk(clk),.reset(reset),.IOInst(IOInst),.IOInstReg(IOInstReg_s3));
+
+///////////Interrupt Synchronization//////////////////
+reg NMIReg; //sync NMI
+reg [1:0] NMI_IDReg;
+reg Interrupt=0;
+always @ (posedge reset, posedge clk)
+begin
+	if(reset)
+	begin
+		NMIReg <= 0;
+		NMI_IDReg <= 2'd0;
+	end
+	else
+	begin
+		NMIReg <= NMI;
+		NMI_IDReg <= NMI_ID;
+	end
+end
+
+reg AsyncR;
+always @ (posedge AsyncR,posedge NMIReg)
+begin
+	if(AsyncR)
+		Interrupt <= 0;
+	else
+		Interrupt <= ~Interrupt;
+end
+always @ (posedge reset, posedge clk)
+begin
+	if(reset)
+	begin
+		AsyncR <= 1;
+	end
+	else
+	begin
+		AsyncR <= Interrupt;
+	end
+end
+
+////////////////////////////////////////////////////////
+///////////Interrupt Acknowledge/////////////////////////
+wire NMI_ACKRst, jumpfromISR;
+reg jumpfromISRReg1,jumpfromISRReg2;
+assign jumpfromISR = (InstReg[31:26] == 6'h3)?(1'b1):(1'b0);
+always @ (posedge clk, posedge reset)
+begin
+	if(reset)
+	begin
+		jumpfromISRReg1 <= 0;
+		jumpfromISRReg2 <= 0;
+	end
+	else
+	begin
+		jumpfromISRReg1 <= jumpfromISR;
+		jumpfromISRReg2 <= jumpfromISRReg1;
+	end
+end
+
+assign NMI_ACKRst = (reset | jumpfromISRReg2 & (~NMI_ACK)  )?(1'b1):(1'b0);
+
+always @ (posedge NMI_ACKRst,posedge NMIReg)
+begin
+	if(NMI_ACKRst)
+	begin
+		NMI_ACK <= 1'b1;
+	end
+	else
+	begin
+		NMI_ACK <= 1'b0;
+	end
+end
+/////////////////////////////////////////////////////////
 
 wire [31:0] /*PCPlus4PlusOff,*/Result,B/*, ResultReg*/;
 //wire Equal;
@@ -122,14 +220,19 @@ stage3 #(Flag_Width) s4 (.PCPlus4(PCPlus4Reg_s3),.A(AReg),.B(BReg),.SignExtImme(
 
 ExceptionBlock #(Flag_Width) EXP (.Flag_EX(Flag),
 .Flag_ID(UndefInst),
-.PCInterrupted(PCPlus4Reg_s3),
-.EPC(EPC),
+.PCInterruptedinID(PCPlus4Reg), //corresponding to UndefInst
+.PCInterruptedinEX(PCPlus4Reg_s3), //corresponding to Overflow
+.EPC(ResumeAddr),
 .Cause(Cause),
 .EX_Mem_Flush(EX_Mem_Flush),
 .ID_EX_Flush(ID_EX_Flush),
 .IF_ID_Flush(IF_ID_Flush),
 .ChooseEPC(ChooseEPC),
-.reset(reset)
+.clk(clk),
+.reset(reset),
+.Excep_IntAddr(ExceptionAddr),
+.NMI(Interrupt),
+.NMI_ID(NMI_IDReg)
 );
 
 //////////////////////////////------------------------//////////////////////////////////////////////
@@ -137,9 +240,11 @@ ExceptionBlock #(Flag_Width) EXP (.Flag_EX(Flag),
 wire [31:0] PCPlus4PlusOffReg/*,ResultReg*/,B_Reg;
 wire EqualReg;
 wire [4:0] WrRegReg;
-output [3:0] MEMReg_s5;
+//output [3:0] MEMReg_s5;
+wire [3:0] MEMReg_s5;
 wire [1:0] WBReg_s5;
-EXMem s5 (.PCPlus4PlusOff(PCPlus4PlusOff),.Equal(Equal),.Result(Result),.OutB(B),.WrReg(WriteReg),.WB(WBReg_s4),.MEM(MEMReg_s4),.EX_Mem_Flush_excep(EX_Mem_Flush),.PCPlus4PlusOffReg(PCPlus4PlusOffReg),.EqualReg(EqualReg),.ResultReg(ResultReg),.OutBReg(B_Reg),.WrRegReg(WrRegReg),.WBReg(WBReg_s5),.MEMReg(MEMReg_s5),.clk(clk),.reset(reset));
+wire IOInstReg_s5;
+EXMem s5 (.PCPlus4PlusOff(PCPlus4PlusOff),.Equal(Equal),.Result(Result),.OutB(B),.WrReg(WriteReg),.WB(WBReg_s4),.MEM(MEMReg_s4),.EX_Mem_Flush_excep(EX_Mem_Flush),.PCPlus4PlusOffReg(PCPlus4PlusOffReg),.EqualReg(EqualReg),.ResultReg(ResultReg),.OutBReg(B_Reg),.WrRegReg(WrRegReg),.WBReg(WBReg_s5),.MEMReg(MEMReg_s5),.clk(clk),.reset(reset),.IOInst(IOInstReg_s3),.IOInstReg(IOInstReg_s5));
 
 wire[31:0] MemOp,ResultRType;
 wire [4:0] DestReg;
@@ -147,7 +252,12 @@ wire [1:0] WBReg_s6;
 
 assign DataAddr = ResultReg;
 assign DataOut = B_Reg;
-assign MemOp = DataIn;
+assign MemOp = (IOInstReg_s5)?(Port):(DataIn);	//either from port if IOInst=1 or from memory
+assign ipbar_op = (IOInstReg_s5 & MEMReg_s5[1])?(1'b1):(1'b0);
+
+output DataMemWrite;
+assign DataMemWrite = MEMReg_s5[1]&(~IOInstReg_s5);
+assign Port=(IOInstReg_s5 & MEMReg_s5[1])?(B_Reg):(32'bz);
 
 Stage4 s6 (.PCPlus4PlusOff(PCPlus4PlusOffReg),
 .ALUResult(ResultReg),
